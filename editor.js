@@ -300,11 +300,10 @@ const EDITOR = (() => {
           Or upload MP4 file
           <input type="file" accept="video/mp4,video/*" style="display:none;" onchange="EDITOR.uploadVideo(event,'${cat}',${i})">
         </label>
-        ${p.video ? `<div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px;">
-          <span style="font-family:JetBrains Mono,monospace;font-size:10px;color:#22c55e;">✓ Video set</span>
-          <button onclick="EDITOR.clearVideo('${cat}',${i})" style="background:none;border:none;color:#ef4444;font-size:11px;cursor:pointer;font-family:JetBrains Mono,monospace;">✕ Remove Video</button>
-        </div>` : ''}
+        <div id="video-status-${cat}-${i}">${buildVideoStatus(cat, i, p)}</div>
       </div>` : ''}
+
+
 
       <!-- Gallery images -->
       <div style="margin-bottom:6px;">
@@ -385,6 +384,13 @@ const EDITOR = (() => {
   }
 
   // ── Image upload ───────────────────────────────────────────
+  function buildVideoStatus(cat, i, p) {
+    return p.video ? `<div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px;">
+      <span style="font-family:JetBrains Mono,monospace;font-size:10px;color:#22c55e;">✓ Video set</span>
+      <button onclick="EDITOR.clearVideo('${cat}',${i})" style="background:none;border:none;color:#ef4444;font-size:11px;cursor:pointer;font-family:JetBrains Mono,monospace;">✕ Remove Video</button>
+    </div>` : '';
+  }
+
   async function uploadImg(e, cat, i) {
     const file = e.target.files[0]; if(!file) return;
     const data = await fileToDataURL(file);
@@ -421,12 +427,16 @@ const EDITOR = (() => {
 
   function clearImg(cat, i) {
     PROJECTS[cat][i].img = null;
-    renderTab('projects');
+    const thumb = document.getElementById(`thumb-${cat}-${i}`);
+    if(thumb) thumb.innerHTML = '';
   }
 
   function clearVideo(cat, i) {
     PROJECTS[cat][i].video = null;
-    renderTab('projects');
+    const status = document.getElementById(`video-status-${cat}-${i}`);
+    if(status) status.innerHTML = buildVideoStatus(cat, i, PROJECTS[cat][i]);
+    const urlInput = document.getElementById(`p-${cat}-${i}-video`);
+    if(urlInput) urlInput.value = '';
   }
 
   async function uploadVideo(e, cat, i) {
@@ -434,8 +444,11 @@ const EDITOR = (() => {
     showToast('Processing video...');
     const data = await fileToDataURL(file);
     PROJECTS[cat][i].video = data;
+    const status = document.getElementById(`video-status-${cat}-${i}`);
+    if(status) status.innerHTML = buildVideoStatus(cat, i, PROJECTS[cat][i]);
+    const urlInput = document.getElementById(`p-${cat}-${i}-video`);
+    if(urlInput) urlInput.value = data;
     showToast('Video uploaded ✓');
-    renderTab('projects');
   }
 
   async function uploadGallery(e, cat, i) {
@@ -444,7 +457,7 @@ const EDITOR = (() => {
       const data = await fileToDataURL(file);
       PROJECTS[cat][i].gallery.push(data);
     }
-    renderTab('projects');
+    attachProjectHandlers();
     showToast(`${files.length} image(s) added to gallery ✓`);
   }
 
@@ -460,6 +473,8 @@ const EDITOR = (() => {
     if(!confirm('Remove this project?')) return;
     PROJECTS[cat].splice(i, 1);
     renderTab('projects');
+    const catEl = document.getElementById(`cat-${cat}`);
+    if(catEl) catEl.style.display = 'block';
   }
 
   function toggleCat(btn, id) {
